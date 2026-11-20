@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "disk-tree"
+version = "1.0.0"
+description = "A fast, friendly disk usage viewer: expand folders to see what's taking up space."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = [
+    # PySide6 6.12.0 aborts at runtime on Python 3.10 (None refcount bug), so cap it there
+    "PySide6-Essentials>=6.6,<6.12; python_version < '3.11'",
+    "PySide6-Essentials>=6.6; python_version >= '3.11'",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+disktree = "disktree.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+disktree = ["assets/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

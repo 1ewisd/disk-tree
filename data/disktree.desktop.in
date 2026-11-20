@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Disk Tree
+GenericName=Disk Usage Viewer
+Comment=Browse folders and see what is taking up space; expand a folder to see what is inside it
+Exec=@EXEC@
+Icon=disktree
+Terminal=false
+Categories=System;Utility;FileTools;
+Keywords=disk;usage;size;space;folders;storage;cleanup;
+StartupWMClass=disktree
