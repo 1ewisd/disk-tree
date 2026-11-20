@@ -223,17 +223,17 @@ class Window(QWidget):
         if entries is None:
             item.addChild(TItem([f"(not readable: {error})", "—"], "", False))
             return
-        for name, child_path, is_dir, size, other_fs in entries:
+        for name, child_path, is_dir, size, skipped in entries:
             if size is None and not is_dir:
                 text = "—"
-            elif other_fs:
-                text = "other filesystem"
+            elif skipped:
+                text = f"({skipped})"
             else:
                 text = human_size(size) if size is not None else "calculating…"
-            child = TItem([name, text], child_path, is_dir and not other_fs, size)
+            child = TItem([name, text], child_path, is_dir and not skipped, size)
             child.setData(1, FRAC, -1.0)
             child.setTextAlignment(1, Qt.AlignRight | Qt.AlignVCenter)
-            if is_dir and not other_fs:
+            if is_dir and not skipped:
                 self._placeholder(child)
             child.setHidden(self.folders_only and not child.is_dir)
             self._items[child_path] = child

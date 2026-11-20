@@ -80,3 +80,58 @@ def test_scanner_reports_listing_sizes_then_done(tmp_path):
     assert events[0] == ("listed", 2) and events[-1] == ("done",)
     sized = {e[1]: e[2] for e in events if e[0] == "sized"}
     assert sized["big"] >= 2 * MIB and set(sized) == {"big", "small"}
+
+
+def test_mounts_classify_real_virtual_and_unmounted(tmp_path, monkeypatch):
+    from disktree import scanner
+
+    fake = ("/dev/a / btrfs rw 0 0\n/dev/b /home btrfs rw 0 0\nproc /proc proc rw 0 0\n"
+            "tmpfs /tmp tmpfs rw 0 0\nportal /run/user/1000/doc fuse.portal rw 0 0\n"
+            "/dev/c /mnt/my\\040disk ext4 rw 0 0\n")
+    import io
+    monkeypatch.setattr(scanner, "open", lambda *a, **k: io.StringIO(fake), raising=False)
+    m = scanner.Mounts()
+    assert {"/", "/home", "/tmp", "/mnt/my disk"} <= m.real
+    assert m.skip_reason("/proc", 2, 1) == "virtual filesystem"
+    assert m.skip_reason("/run/user/1000/doc", 2, 1) == "network / FUSE mount"
+    assert m.skip_reason("/home", 2, 1) is None               # a real mount on another device: measured
+    assert m.skip_reason("/.snapshots", 2, 1) == "other volume"  # different device, not mounted
+    assert m.skip_reason("/usr", 1, 1) is None
+
+
+def test_measure_crosses_into_a_real_mount_but_not_a_stray_volume(tmp_path, monkeypatch):
+    from disktree import scanner
+
+    make(tmp_path / "plain" / "f.bin", MIB)
+    make(tmp_path / "mnt" / "g.bin", 2 * MIB)
+    make(tmp_path / "snap" / "h.bin", 4 * MIB)
+    real_stat = os.stat
+
+    class FakeMounts(scanner.Mounts):
+        def __init__(self):
+            self.real, self.skip = {str(tmp_path / "mnt")}, {}
+
+    # pretend 'mnt' and 'snap' live on other devices
+    other = {str(tmp_path / "mnt"): 77, str(tmp_path / "snap"): 88}
+
+    class S:
+        def __init__(self, st, dev): self._st, self.st_dev = st, dev
+        def __getattr__(self, n): return getattr(self._st, n)
+
+    orig_scandir = os.scandir
+
+    class E:
+        def __init__(self, e): self._e = e
+        def __getattr__(self, n): return getattr(self._e, n)
+        def stat(self, follow_symlinks=True):
+            st = self._e.stat(follow_symlinks=follow_symlinks)
+            return S(st, other.get(self._e.path, st.st_dev))
+
+    class Ctx:
+        def __init__(self, p): self.it = orig_scandir(p)
+        def __enter__(self): return (E(e) for e in self.it.__enter__())
+        def __exit__(self, *a): return self.it.__exit__(*a)
+
+    monkeypatch.setattr(scanner.os, "scandir", lambda p: Ctx(p))
+    total = scanner.measure(str(tmp_path), {}, mounts=FakeMounts())
+    assert 3 * MIB <= total < 4 * MIB    # plain + mnt counted, snap skipped

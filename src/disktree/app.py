@@ -56,7 +56,7 @@ def main():
         i = args.index("--screenshot")
         shot = args[i + 1]
         del args[i:i + 2]
-    root = os.path.abspath(os.path.expanduser(args[0])) if args else os.path.expanduser("~")
+    root = os.path.realpath(os.path.expanduser(args[0])) if args else "/"
     if not os.path.isdir(root):
         sys.exit(f"disktree: not a folder: {root}")
     app = QApplication(sys.argv[:1])

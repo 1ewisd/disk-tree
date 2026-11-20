@@ -26,7 +26,7 @@ Click down into the heavy folder, find the 900 MiB video you forgot about, and m
 - **Expand as you go.** Folders list instantly; their sizes fill in live as they're measured in the background.
 - **Bars and percentages** on every row, coloured green / amber / red by how much of the parent it takes.
 - **Fast.** Parallel scanning, and every folder measured on the way is cached, so opening a sub-folder you've already sized is instant.
-- **Honest sizes.** Uses allocated disk space like `du` (sparse VM images don't look huge), counts hard links once, skips symlinks, and doesn't wander onto other drives.
+- **Honest sizes.** Uses allocated disk space like `du` (sparse VM images don't look huge), counts hard links once and skips symlinks. Opens at `/` and measures every real mount (`/home`, `/boot`, `/tmp`...). Virtual filesystems (`/proc`, `/sys`, `/dev`), network / FUSE mounts and unmounted volumes such as btrfs snapshots are labelled and left out, so nothing is counted twice and scans can't hang.
 - **Never freezes.** Scans run off the UI thread, and you can **Stop** one (`Esc`) or **Rescan** (`F5`).
 - **Clean up from the tree.** Right-click for Open, Show in file manager, Copy path, Scan this folder as root, Rescan this folder and **Move to Trash**. The sizes above it update straight away, no rescan needed. Nothing is ever permanently deleted.
 - **Folders only** toggle, **Up** to the parent (`Backspace`), and a status bar with the total and disk usage.
@@ -50,7 +50,8 @@ Re-run it to upgrade. To remove everything: `./uninstall.sh`.
 ## Use
 
 ```bash
-disktree             # scan your home folder
+disktree             # scan the whole system, starting at /
+disktree ~           # scan your home folder
 disktree /var        # scan a specific folder
 disktree --version
 ```
@@ -78,6 +79,7 @@ src/disktree/
   app.py       entry point
 ```
 
+Folders you can't read (for example `/root` as a normal user) count as 0 B; run it as root to see everything.
 Each expanded folder is listed immediately, then its sub-folders are sized in parallel and reported as they finish.
 Rows are updated in place, so the tree never collapses while you browse.
 
